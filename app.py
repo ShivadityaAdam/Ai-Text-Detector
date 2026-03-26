@@ -3,7 +3,6 @@ import torch
 from transformers import pipeline, GPT2LMHeadModel, GPT2Tokenizer
 import numpy as np
 
-
 st.set_page_config(page_title="AI Text Sentinel", page_icon="🔍")
 
 st.title("🔍 AI Text Detector")
