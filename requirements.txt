@@ -1,4 +1,6 @@
-streamlit
+fastapi
+uvicorn
+easyocr
+python-multipart
+pillow
 torch
-transformers
-tf-keras
