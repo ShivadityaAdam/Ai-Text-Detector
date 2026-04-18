@@ -1,67 +1,72 @@
 package main
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"net/http"
+	"log"
+	"os"
+	"strconv"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5"
 	"github.com/jung-kurt/gofpdf"
 )
 
-
-type AnalysisData struct {
-	Username   string  `json:"username"`
-	Score      float64 `json:"ai_score"`
-	Perplexity float64 `json:"perplexity"`
-	Burstiness float64 `json:"burstiness"`
-	Verdict    string  `json:"verdict"`
-}
-
-func generateReport(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var data AnalysisData
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	
-	pdf := gofpdf.New("P", "mm", "A4", "")
-	pdf.AddPage()
-	
-
-	pdf.SetFont("Arial", "B", 24)
-	pdf.Cell(40, 10, "AI Shield Integrity Report")
-	pdf.Ln(20)
-
-	
-	pdf.SetFont("Arial", "", 14)
-	pdf.Cell(40, 10, fmt.Sprintf("User: %s", data.Username))
-	pdf.Ln(10)
-	pdf.Cell(40, 10, fmt.Sprintf("AI Probability Score: %.2f%%", data.Score*100))
-	pdf.Ln(10)
-	pdf.Cell(40, 10, fmt.Sprintf("Verdict: %s", data.Verdict))
-	pdf.Ln(15)
-
-	
-	pdf.SetFont("Arial", "I", 12)
-	pdf.Cell(40, 10, "Technical Metrics:")
-	pdf.Ln(8)
-	pdf.Cell(40, 10, fmt.Sprintf("- Perplexity: %.2f", data.Perplexity))
-	pdf.Ln(8)
-	pdf.Cell(40, 10, fmt.Sprintf("- Burstiness: %.2f", data.Burstiness))
-
-	
-	w.Header().Set("Content-Type", "application/pdf")
-	pdf.Output(w)
-}
-
 func main() {
-	http.HandleFunc("/generate", generateReport)
-	fmt.Println("Go Report Service running on port 8080...")
-	http.ListenAndServe(":8080", nil)
+	app := fiber.New()
+
+	// 1. Supabase Connection (via pgx)
+	// Get this from your Supabase Dashboard -> Project Settings -> Database
+	dbURL := os.Getenv("DATABASE_URL")
+	conn, err := pgx.Connect(context.Background(), dbURL)
+	if err != nil {
+		log.Fatalf("Unable to connect to Supabase: %v\n", err)
+	}
+	defer conn.Close(context.Background())
+
+	// 2. The PDF Generation Endpoint
+	app.Get("/generate/:id", func(c *fiber.Ctx) error {
+		scanID := c.Params("id")
+		
+		// Fetch scan data from Supabase
+		var text string
+		var score float64
+		var ppl float64
+		
+		query := "SELECT text, ai_score, perplexity FROM scans WHERE id=$1"
+		err := conn.QueryRow(context.Background(), query, scanID).Scan(&text, &score, &ppl)
+		if err != nil {
+			return c.Status(404).JSON(fiber.Map{"error": "Scan record not found"})
+		}
+
+		// 3. Create High-Performance PDF
+		pdf := gofpdf.New("P", "mm", "A4", "")
+		pdf.AddPage()
+		
+		// Header
+		pdf.SetFont("Arial", "B", 16)
+		pdf.Cell(40, 10, "Official AI Detection Audit")
+		pdf.Ln(12)
+
+		// Stats Grid
+		pdf.SetFont("Arial", "", 12)
+		pdf.Cell(40, 10, fmt.Sprintf("Report ID: %s", scanID))
+		pdf.Ln(8)
+		pdf.Cell(40, 10, fmt.Sprintf("AI Probability: %.2f%%", score*100))
+		pdf.Ln(8)
+		pdf.Cell(40, 10, fmt.Sprintf("Linguistic Perplexity: %.2f", ppl))
+		pdf.Ln(15)
+
+		// Content
+		pdf.SetFont("Arial", "I", 10)
+		pdf.MultiCell(0, 5, fmt.Sprintf("Analyzed Text Sample:\n%s", text), "1", "L", false)
+
+		// 4. Stream to browser
+		c.Set("Content-Type", "application/pdf")
+		c.Set("Content-Disposition", fmt.Sprintf("attachment; filename=audit_%s.pdf", scanID))
+		
+		return pdf.Output(c.Response().BodyWriter())
+	})
+
+	log.Fatal(app.Listen(":3000"))
 }
