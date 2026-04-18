@@ -1,112 +1,102 @@
 import React, { useState } from 'react';
+import { Upload, FileText, Download, ShieldCheck, Zap, BarChart3 } from 'lucide-react';
 
+// Replace with your actual hosted API URL
+const API_BASE = "https://your-python-api.koyeb.app";
 
-interface ScanResult {
-  text: string;
-  aiScore: number;
-  isAI: boolean;
-}
-
-const App: React.FC = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [token, setToken] = useState<string | null>(null);
-  const [result, setResult] = useState<ScanResult | null>(null);
+export default function App() {
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
-  
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setToken("demo_token_123"); 
-    alert(isLogin ? "Logged in successfully!" : "Account created!");
-  };
-
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
+  const handleUpload = async () => {
+    if (!file) return;
     setLoading(true);
-    
-    
-    setTimeout(() => {
-      setResult({
-        text: "The quick brown fox jumped over...",
-        aiScore: 0.89,
-        isAI: true
-      });
-      setLoading(false);
-    }, 1500);
-  };
+    const formData = new FormData();
+    formData.append("file", file);
 
-  
-  if (!token) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-md">
-          <h1 className="text-3xl font-black text-slate-800 mb-2">{isLogin ? "Welcome" : "Join Us"}</h1>
-          <p className="text-slate-500 mb-8">AI Text & OCR Detector Pro</p>
-          
-          <form onSubmit={handleAuth} className="space-y-4">
-            <input type="text" placeholder="Username" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required />
-            <input type="password" placeholder="Password" className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" required />
-            <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition">
-              {isLogin ? "Sign In" : "Create Account"}
-            </button>
-          </form>
-          
-          <button onClick={() => setIsLogin(!isLogin)} className="w-full mt-4 text-sm text-blue-600 font-medium">
-            {isLogin ? "Need an account? Sign Up" : "Already have an account? Login"}
-          </button>
-        </div>
-      </div>
-    );
-  }
+    try {
+      const res = await fetch(`${API_BASE}/scan`, { method: "POST", body: formData });
+      const data = await res.json();
+      setResult(data);
+    } catch (err) {
+      alert("Connection to AI Engine failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <header className="max-w-5xl mx-auto flex justify-between items-center mb-12">
-        <h2 className="text-2xl font-bold text-slate-800 underline decoration-blue-500">AI.Shield</h2>
-        <button onClick={() => setToken(null)} className="text-red-500 font-medium">Logout</button>
+    <div className="min-h-screen p-8 flex flex-col items-center">
+      {/* Header */}
+      <header className="text-center mb-12">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+          AI Text Detector
+        </h1>
+        <p className="text-slate-400 mt-2">Forensic Linguistic Analysis using Perplexity & Burstiness</p>
       </header>
 
-      <main className="max-w-5xl mx-auto grid md:grid-cols-2 gap-8">
-        {/* Upload Card */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="text-xl font-bold mb-4">Analyze Document</h3>
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center hover:border-blue-400 transition cursor-pointer">
-            <input type="file" onChange={handleFileUpload} className="hidden" id="fileInput" />
-            <label htmlFor="fileInput" className="cursor-pointer text-blue-600 font-bold">
-              Click to upload Image for OCR
-            </label>
-            <p className="text-xs text-gray-400 mt-2">Supports JPG, PNG</p>
-          </div>
+      <main className="w-full max-w-2xl">
+        {/* Dropzone */}
+        <div className={`border-2 border-dashed rounded-2xl p-12 text-center transition-all ${file ? 'border-emerald-500 bg-emerald-500/5' : 'border-slate-700 hover:border-blue-500 bg-slate-800/50'}`}>
+          <input 
+            type="file" 
+            id="fileInput" 
+            className="hidden" 
+            onChange={(e) => setFile(e.target.files?.[0] || null)} 
+          />
+          <label htmlFor="fileInput" className="cursor-pointer flex flex-col items-center">
+            <Upload className={`w-12 h-12 mb-4 ${file ? 'text-emerald-400' : 'text-slate-500'}`} />
+            <span className="text-lg font-medium">
+              {file ? file.name : "Drop an image or document here"}
+            </span>
+            <span className="text-sm text-slate-500 mt-1">Supports JPG, PNG, TXT</span>
+          </label>
         </div>
 
-        {/* Result Card */}
-        <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 min-h-[300px]">
-          <h3 className="text-xl font-bold mb-4">Detection Result</h3>
-          {loading ? (
-            <div className="animate-pulse flex space-y-4 flex-col">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-12 bg-gray-200 rounded"></div>
-            </div>
-          ) : result ? (
-            <div>
-              <div className={`text-5xl font-black mb-2 ${result.isAI ? 'text-red-500' : 'text-green-500'}`}>
-                {(result.aiScore * 100).toFixed(0)}%
+        <button 
+          onClick={handleUpload}
+          disabled={!file || loading}
+          className="w-full mt-6 py-4 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 font-bold transition-all shadow-lg shadow-blue-900/20 flex justify-center items-center gap-2"
+        >
+          {loading ? <Zap className="animate-spin" /> : <ShieldCheck />}
+          {loading ? "Analyzing Patterns..." : "Verify Content Authenticity"}
+        </button>
+
+        {/* Results Dashboard */}
+        {result && (
+          <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 overflow-hidden relative">
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-slate-400 uppercase text-xs font-bold tracking-widest">Analysis Result</h3>
+                  <p className="text-3xl font-bold">{(result.score * 100).toFixed(1)}% Likely AI</p>
+                </div>
+                <BarChart3 className="text-blue-400 w-8 h-8" />
               </div>
-              <p className="font-bold text-slate-700 mb-4">{result.isAI ? 'Likely AI Generated' : 'Likely Human Written'}</p>
-              <div className="p-4 bg-gray-50 rounded-lg text-sm text-gray-600 italic">
-                "{result.text}"
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-slate-900/50 p-4 rounded-lg">
+                  <span className="text-xs text-slate-500 block">Perplexity</span>
+                  <span className="text-xl font-mono text-emerald-400">{result.perplexity}</span>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-lg">
+                  <span className="text-xs text-slate-500 block">Burstiness</span>
+                  <span className="text-xl font-mono text-emerald-400">{result.burstiness}</span>
+                </div>
               </div>
-              <button className="mt-6 w-full py-2 border-2 border-blue-600 text-blue-600 rounded-lg font-bold hover:bg-blue-50 transition">
-                Generate PDF Report
-              </button>
+
+              <a 
+                href={`${API_BASE}/report/${result.id}`}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm font-semibold"
+              >
+                <Download size={18} />
+                Download PDF Audit Report
+              </a>
             </div>
-          ) : (
-            <p className="text-gray-400">Scan a document to see the magic.</p>
-          )}
-        </div>
+          </div>
+        )}
       </main>
     </div>
   );
-};
-
-export default App;
+}
