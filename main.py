@@ -9,6 +9,14 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from supabase import create_client, Client
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 from fpdf import FPDF
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://your-ui-name.vercel.app"], # Your specific Vercel URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app = FastAPI()
 
