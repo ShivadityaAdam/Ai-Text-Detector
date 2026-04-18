@@ -13,6 +13,34 @@ This project utilizes two primary statistical markers to verify authenticity:
 - **Frontend (React):** A modern dashboard built with Vite and Tailwind CSS for real-time forensic visualization.
 - **Persistence (Supabase):** Managed PostgreSQL and Auth to ensure data integrity.
 
+🚀 Getting Started
+1. Environment Configuration
+
+Create a .env file in the root directory (and a copy in the /reports folder) with the following:
+Code snippet
+
+SUPABASE_URL=your_project_url
+SUPABASE_KEY=your_anon_key
+DATABASE_URL=your_postgresql_connection_string
+
+2. Run AI Engine (Root)
+Bash
+
+pip install -r requirements.txt
+uvicorn main:app --reload
+
+3. Run Audit Service (Go)
+Bash
+
+cd reports
+go run main.go
+
+4. Run Frontend (React)
+Bash
+
+cd frontend
+npm install
+npm run dev
 ## 📂 Project Structure
 ```text
 /                  # Python AI Engine & API Logic
