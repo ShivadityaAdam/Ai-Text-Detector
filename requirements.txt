@@ -1,6 +1,10 @@
 fastapi
 uvicorn
-easyocr
 python-multipart
+supabase
+easyocr
+torch --index-url https://download.pytorch.org/whl/cpu
+transformers
+numpy
 pillow
-torch
+fpdf2
