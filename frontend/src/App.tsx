@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Upload, FileText, Download, ShieldCheck, Zap, BarChart3 } from 'lucide-react';
 
-// Replace with your actual hosted API URL
+
 const API_BASE = "https://your-python-api.koyeb.app";
 
 export default function App() {
@@ -16,7 +16,7 @@ export default function App() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${API_BASE}/scan`, { method: "POST", body: formData });
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/scan`, { method: "POST", body: formData });
       const data = await res.json();
       setResult(data);
     } catch (err) {
