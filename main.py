@@ -13,26 +13,24 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://your-ui-name.vercel.app"], # Your specific Vercel URL
+    allow_origins=["http://localhost:5173"], 
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app = FastAPI()
 
-# --- CONFIGURATION ---
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- MODEL LOADING (AI DETECTION & OCR) ---
-# GPT-2 is the industry standard for calculating Perplexity in AI detection
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
 model = GPT2LMHeadModel.from_pretrained("gpt2").to(device)
 reader = easyocr.Reader(['en'], gpu=torch.cuda.is_available())
 
-# --- HELPER FUNCTIONS ---
 
 def calculate_perplexity(text):
     """Calculates how 'predictable' the text is. Lower = More likely AI."""
@@ -73,7 +71,6 @@ def preprocess_image(image_bytes):
     img = img.filter(ImageFilter.SHARPEN)
     return np.array(img)
 
-# --- API ENDPOINTS ---
 
 @app.post("/scan")
 async def scan_content(file: UploadFile = File(...)):
@@ -89,18 +86,16 @@ async def scan_content(file: UploadFile = File(...)):
     if len(text.split()) < 10:
         raise HTTPException(status_code=400, detail="Text too short for reliable detection.")
 
-    # 2. Advanced Analysis
+   
     ppl = calculate_perplexity(text)
     burst = calculate_burstiness(text)
 
-    # 3. Hybrid Scoring (Tuned thresholds)
-    # AI usually has PPL < 60 and Burstiness < 20
     ai_prob = 0
     if ppl < 60: ai_prob += 0.6
     if burst < 20: ai_prob += 0.3
     ai_prob = min(ai_prob + (max(0, 40 - ppl) * 0.01), 0.99) # Extra weight for very low PPL
 
-    # 4. Save to Supabase
+    
     data = {"text": text, "ai_score": ai_prob, "perplexity": ppl, "burstiness": burst}
     db_res = supabase.table("scans").insert(data).execute()
 
